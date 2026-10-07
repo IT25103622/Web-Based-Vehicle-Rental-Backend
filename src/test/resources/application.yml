@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: vehicle-rental-uc02-test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+
+app:
+  jwt:
+    secret: B+e8/TyQHlNABAAfPajR/DvulolZfEWKLqHbr6ABayU=
+    expiration-ms: 3600000

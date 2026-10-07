@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Vehicles | UC-02 Availability Management</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/index.html" class="brand-logo">
+        <div class="brand-icon">🚗</div>
+        <div>
+          <span>SLIIT RENTALS</span>
+          <span class="brand-sub">UC-02 Module • IT25101871</span>
+        </div>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/index.html" class="nav-link">Home</a></li>
+          <li><a href="/search.html" class="nav-link active">Search Vehicles</a></li>
+          <li><a href="/my-bookings.html" class="nav-link">My Bookings</a></li>
+          <li><a href="/manager.html" class="nav-link"><span class="nav-tag">Staff</span> Manager</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div style="margin-bottom: 2rem;">
+      <h1 style="font-size: 2rem; font-weight: 800; color: var(--secondary); margin-bottom: 0.25rem;">
+        Vehicle Search &amp; Availability
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Select rental dates to query real-time vehicle availability and prevent double bookings.
+      </p>
+    </div>
+
+    <!-- Search & Filter Card -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <form id="searchForm" onsubmit="executeVehicleSearch(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="startDate">Pickup Date <span class="required">*</span></label>
+            <input type="date" id="startDate" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="endDate">Drop-off Date <span class="required">*</span></label>
+            <input type="date" id="endDate" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pickupLocation">Pickup Location</label>
+            <select id="pickupLocation" class="form-control">
+              <option value="">Any Branch (Island-wide)</option>
+              <option value="Colombo Branch">Colombo Branch (Head Office)</option>
+              <option value="Kandy Branch">Kandy Branch</option>
+              <option value="Galle Branch">Galle Branch</option>
+              <option value="Negombo Branch">Negombo Branch (Airport)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="dropoffLocation">Drop-off Location</label>
+            <select id="dropoffLocation" class="form-control">
+              <option value="">Same as Pickup</option>
+              <option value="Colombo Branch">Colombo Branch</option>
+              <option value="Kandy Branch">Kandy Branch</option>
+              <option value="Galle Branch">Galle Branch</option>
+              <option value="Negombo Branch">Negombo Branch</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vehicleType">Vehicle Category</label>
+            <select id="vehicleType" class="form-control">
+              <option value="">All Categories</option>
+              <option value="SEDAN">Sedan</option>
+              <option value="SUV">SUV</option>
+              <option value="HATCHBACK">Hatchback</option>
+              <option value="VAN">Van</option>
+              <option value="LUXURY">Luxury</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="maxPrice">Maximum Price (Per Day)</label>
+            <select id="maxPrice" class="form-control">
+              <option value="">Any Budget</option>
+              <option value="5000">Under Rs. 5,000</option>
+              <option value="10000">Under Rs. 10,000</option>
+              <option value="15000">Under Rs. 15,000</option>
+              <option value="20000">Under Rs. 20,000</option>
+              <option value="30000">Under Rs. 30,000</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+          <button type="button" class="btn btn-secondary" onclick="resetSearchFilters()">Reset Filters</button>
+          <button type="submit" class="btn btn-primary" id="searchSubmitBtn">
+            🔍 SEARCH VEHICLES
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Active Filter Status & Count -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <div id="searchResultsMeta" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main);">
+        Showing all fleet vehicles
+      </div>
+      <div id="dateNotice" style="font-size: 0.85rem; color: var(--primary); font-weight: 500;"></div>
+    </div>
+
+    <!-- Vehicles Grid Container -->
+    <div id="vehiclesContainer" class="vehicles-grid">
+      <!-- Injected via search.js -->
+    </div>
+  </main>
+
+  <!-- Vehicle Details Modal -->
+  <div class="modal-overlay" id="vehicleModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Vehicle Details</h3>
+        <button class="modal-close" onclick="closeVehicleModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Details injected via JS -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeVehicleModal()">Close</button>
+        <button type="button" class="btn btn-primary" id="modalBookBtn">Book Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>SE2030 Software Engineering Individual Project • <strong>UC-02 Vehicle Availability, Search &amp; Booking</strong></p>
+    <p>Developed by <span class="footer-highlight">Maduwearachchi T.G.O.N (IT25101871)</span> • Spring Boot + MySQL + Vanilla JS</p>
+  </footer>
+
+  <script src="/js/search.js"></script>
+</body>
+</html>

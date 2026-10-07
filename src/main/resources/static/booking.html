@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Reservation | UC-02 Vehicle Rental</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .readonly-field {
+      background-color: #f1f5f9 !important;
+      cursor: not-allowed !important;
+      color: #334155 !important;
+      border-color: #cbd5e1 !important;
+    }
+    .auth-banner {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .auth-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #1e40af;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+    }
+    .auth-warning {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/index.html" class="brand-logo">
+        <div class="brand-icon">🚗</div>
+        <div>
+          <span>SLIIT RENTALS</span>
+          <span class="brand-sub">UC-02 Module • IT25101871</span>
+        </div>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/index.html" class="nav-link">Home</a></li>
+          <li><a href="/search.html" class="nav-link">Search Vehicles</a></li>
+          <li><a href="/my-bookings.html" class="nav-link">My Bookings</a></li>
+          <li><a href="/manager.html" class="nav-link"><span class="nav-tag">Staff</span> Manager</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div style="margin-bottom: 2rem;">
+      <h1 style="font-size: 2rem; font-weight: 800; color: var(--secondary); margin-bottom: 0.25rem;">
+        Complete Your Reservation
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Customer details are loaded automatically from your authenticated account and are locked (read-only). The backend performs a mandatory double-booking check before confirming your reservation.
+      </p>
+    </div>
+
+    <!-- Active Authentication Status Banner -->
+    <div id="authStatusBanner" class="auth-banner" style="display: none;">
+      <div>
+        <div style="font-size: 0.85rem; color: #1e40af; font-weight: 600; margin-bottom: 0.2rem;">
+          AUTHENTICATED CUSTOMER SESSION
+        </div>
+        <div style="font-size: 1.05rem; font-weight: 700; color: #1e3a8a;">
+          <span id="sessionCustomerName">Loading...</span> 
+          <span id="sessionCustomerIdBadge" class="auth-badge">ID: #--</span>
+        </div>
+        <div style="font-size: 0.82rem; color: #475569; margin-top: 0.2rem;">
+          Verified via central access control • <span id="sessionCustomerEmail">--</span>
+        </div>
+      </div>
+      <div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="promptTokenLogin()">Switch / Update Token</button>
+      </div>
+    </div>
+
+    <!-- Unauthenticated Alert if no token -->
+    <div id="unauthAlert" class="auth-warning" style="display: none;">
+      <strong>⚠️ Session Authentication Required:</strong> You are not currently logged in. To reserve a vehicle, please provide a valid JWT token from Friend's Access Control login (`/api/auth/login`).
+      <div style="margin-top: 0.75rem;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="promptTokenLogin()">🔑 Enter Login Token / Credentials</button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 2rem; align-items: start;">
+      
+      <!-- Selected Vehicle Summary Panel -->
+      <div class="card" id="vehicleSummaryCard">
+        <div class="card-header">
+          <h2 class="card-title">Selected Vehicle</h2>
+          <span id="vehicleTypeBadge" class="badge badge-modified">Loading...</span>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <img id="summaryVehicleImg" src="" alt="Vehicle" style="width: 100%; height: 190px; object-fit: cover; border-radius: var(--radius-sm); background: #e2e8f0;">
+        </div>
+
+        <h3 id="summaryVehicleName" style="font-size: 1.3rem; font-weight: 700; color: var(--secondary);">--</h3>
+        <p id="summaryVehicleReg" style="font-family: monospace; color: var(--text-muted); margin-bottom: 1rem;">--</p>
+
+        <div style="border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 0.85rem 0; margin-bottom: 1rem; font-size: 0.9rem; display: flex; flex-direction: column; gap: 0.5rem;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Daily Rental Rate:</span>
+            <strong id="summaryRate" style="color: var(--primary);">Rs. 0 / day</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Rental Duration:</span>
+            <strong id="summaryDays">0 days</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Seating Capacity:</span>
+            <strong id="summarySeats">--</strong>
+          </div>
+        </div>
+
+        <div style="background: var(--primary-light); padding: 1rem; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 700; color: var(--secondary);">Total Rental Amount:</span>
+          <span id="summaryTotalAmount" style="font-size: 1.4rem; font-weight: 800; color: var(--primary);">Rs. 0</span>
+        </div>
+
+        <div id="availabilityNotice" style="margin-top: 1rem; font-size: 0.85rem;"></div>
+      </div>
+
+      <!-- Customer Booking Form -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Booking Details</h2>
+          <span class="badge badge-confirmed">UC-02 Form</span>
+        </div>
+
+        <form id="bookingForm" onsubmit="submitBooking(event)">
+          <input type="hidden" id="vehicleId">
+
+          <!-- Read-only Customer Information Group -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <span style="font-size: 0.85rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                🔒 Account Information (Auto-loaded • Read-Only)
+              </span>
+              <span class="badge badge-available" style="font-size: 0.75rem;">Verified Account</span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" for="customerName">Customer Full Name</label>
+              <input type="text" id="customerName" class="form-control readonly-field" readonly required>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="customerEmail">Account Email</label>
+                <input type="email" id="customerEmail" class="form-control readonly-field" readonly required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="customerPhone">Phone Number</label>
+                <input type="tel" id="customerPhone" class="form-control readonly-field" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rental Specific Parameters -->
+          <div class="form-grid" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="pickupLocation">Pickup Branch <span class="required">*</span></label>
+              <select id="pickupLocation" class="form-control" required>
+                <option value="Colombo Branch">Colombo Branch (Head Office)</option>
+                <option value="Kandy Branch">Kandy Branch</option>
+                <option value="Galle Branch">Galle Branch</option>
+                <option value="Negombo Branch">Negombo Branch (Airport)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="dropoffLocation">Drop-off Branch <span class="required">*</span></label>
+              <select id="dropoffLocation" class="form-control" required>
+                <option value="Colombo Branch">Colombo Branch (Head Office)</option>
+                <option value="Kandy Branch">Kandy Branch</option>
+                <option value="Galle Branch">Galle Branch</option>
+                <option value="Negombo Branch">Negombo Branch (Airport)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="startDate">Pickup Date <span class="required">*</span></label>
+              <input type="date" id="startDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="endDate">Drop-off Date <span class="required">*</span></label>
+              <input type="date" id="endDate" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- New Comment Field -->
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label class="form-label" for="bookingComment">
+              Comment / Special Requests 
+              <span style="color: var(--text-muted); font-size: 0.82rem; font-weight: normal;">(Optional)</span>
+            </label>
+            <textarea id="bookingComment" class="form-control" rows="3" placeholder="Enter any instructions or special requirements (e.g. child safety seat, estimated arrival time, flight number)..."></textarea>
+          </div>
+
+          <div id="bookingErrorAlert" style="display: none; padding: 0.85rem; border-radius: var(--radius-sm); background-color: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger); font-size: 0.9rem; margin-bottom: 1.25rem;">
+            <!-- Error messages injected here -->
+          </div>
+
+          <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <a href="/search.html" class="btn btn-secondary">Cancel &amp; Return</a>
+            <button type="submit" class="btn btn-primary" id="confirmBookingBtn">
+              Confirm &amp; Create Booking
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Login / Token Modal for Viva Demonstrations -->
+  <div class="modal-overlay" id="tokenModal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Customer Authentication / Session</h3>
+        <button class="modal-close" onclick="closeTokenModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+          To create a booking, your account must be authenticated. Paste your JWT Bearer token issued by Friend's Access Control module (<code>POST /api/auth/login</code>) below:
+        </p>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="tokenInput">JWT Bearer Token</label>
+          <textarea id="tokenInput" class="form-control" rows="4" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
+        </div>
+        <div id="tokenErrorMsg" style="display: none; color: var(--danger); font-size: 0.85rem; margin-bottom: 0.75rem;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeTokenModal()">Close</button>
+        <button type="button" class="btn btn-primary" onclick="applyTokenAndLoadProfile()">Apply &amp; Verify Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Confirmation Modal -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--success);">🎉 Booking Confirmed!</h3>
+        <button class="modal-close" onclick="window.location.href='/my-bookings.html'">&times;</button>
+      </div>
+      <div class="modal-body" id="successModalBody">
+        <!-- Injected upon successful booking -->
+      </div>
+      <div class="modal-footer">
+        <a href="/my-bookings.html" class="btn btn-primary">View In My Bookings</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>SE2030 Software Engineering Individual Project • <strong>UC-02 Vehicle Availability, Search &amp; Booking</strong></p>
+    <p>Developed by <span class="footer-highlight">Maduwearachchi T.G.O.N (IT25101871)</span> • Spring Boot + MySQL + Vanilla JS</p>
+  </footer>
+
+  <script src="/js/booking.js"></script>
+</body>
+</html>

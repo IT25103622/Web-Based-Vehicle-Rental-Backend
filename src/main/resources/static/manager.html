@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Manager Dashboard | UC-02</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/index.html" class="brand-logo">
+        <div class="brand-icon">🚗</div>
+        <div>
+          <span>SLIIT RENTALS</span>
+          <span class="brand-sub">UC-02 Module • IT25101871</span>
+        </div>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/index.html" class="nav-link">Home</a></li>
+          <li><a href="/search.html" class="nav-link">Search Vehicles</a></li>
+          <li><a href="/my-bookings.html" class="nav-link">My Bookings</a></li>
+          <li><a href="/manager.html" class="nav-link active"><span class="nav-tag">Staff</span> Manager</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 style="font-size: 2rem; font-weight: 800; color: var(--secondary); margin-bottom: 0.25rem;">
+          Operations Manager Dashboard
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          Real-time fleet availability and central reservation oversight for Operations Staff.
+        </p>
+      </div>
+      <button type="button" class="btn btn-secondary" onclick="refreshDashboard()">
+        🔄 Refresh Live Data
+      </button>
+    </div>
+
+    <!-- KPI Metric Summary Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #eff6ff; color: var(--primary);">🚘</div>
+        <div class="stat-info">
+          <span class="stat-label">Total Fleet</span>
+          <span class="stat-value" id="statTotalVehicles">--</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--success-bg); color: var(--success);">✔</div>
+        <div class="stat-info">
+          <span class="stat-label">Available Vehicles</span>
+          <span class="stat-value" id="statAvailVehicles" style="color: var(--success);">--</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--warning-bg); color: var(--warning);">⏳</div>
+        <div class="stat-info">
+          <span class="stat-label">Reserved / Active</span>
+          <span class="stat-value" id="statReservedVehicles" style="color: var(--warning);">--</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;">📑</div>
+        <div class="stat-info">
+          <span class="stat-label">Active Bookings</span>
+          <span class="stat-value" id="statActiveBookings">--</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--danger-bg); color: var(--danger);">❌</div>
+        <div class="stat-info">
+          <span class="stat-label">Cancelled Bookings</span>
+          <span class="stat-value" id="statCancelledBookings" style="color: var(--danger);">--</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Bookings Management with Filters -->
+    <div class="card" style="margin-bottom: 2.5rem;">
+      <div class="card-header">
+        <h2 class="card-title">All Reservations History</h2>
+        <span class="badge badge-modified" id="managerBookingsCount">0 Records</span>
+      </div>
+
+      <!-- Filters Bar -->
+      <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1rem;">
+        <div class="form-grid" style="margin-bottom: 0;">
+          <div class="form-group">
+            <label class="form-label" for="filterStatus">Filter by Status</label>
+            <select id="filterStatus" class="form-control" onchange="loadManagerBookings()">
+              <option value="">All Statuses</option>
+              <option value="CONFIRMED">CONFIRMED</option>
+              <option value="MODIFIED">MODIFIED</option>
+              <option value="CANCELLED">CANCELLED</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterVehicle">Filter by Vehicle</label>
+            <select id="filterVehicle" class="form-control" onchange="loadManagerBookings()">
+              <option value="">All Vehicles</option>
+              <!-- Injected via JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterDate">Filter by Active Date</label>
+            <input type="date" id="filterDate" class="form-control" onchange="loadManagerBookings()">
+          </div>
+
+          <div class="form-group" style="justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" onclick="clearManagerFilters()" style="margin-top: auto;">
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Booking ID</th>
+              <th>Customer</th>
+              <th>Vehicle</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Pickup Branch</th>
+              <th>Drop-off Branch</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="managerBookingsTableBody">
+            <tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading reservations...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 2: Vehicle Fleet Operational Availability -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Vehicle Fleet Operational Availability</h2>
+        <span class="badge badge-available">Live Fleet Table</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Registration</th>
+              <th>Brand &amp; Model</th>
+              <th>Type</th>
+              <th>Rate / Day</th>
+              <th>Seats</th>
+              <th>Mileage</th>
+              <th>Fuel</th>
+              <th>Condition</th>
+              <th>Operational Status</th>
+            </tr>
+          </thead>
+          <tbody id="managerFleetTableBody">
+            <tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading fleet records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Alerts Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>SE2030 Software Engineering Individual Project • <strong>UC-02 Vehicle Availability, Search &amp; Booking</strong></p>
+    <p>Developed by <span class="footer-highlight">Maduwearachchi T.G.O.N (IT25101871)</span> • Spring Boot + MySQL + Vanilla JS</p>
+  </footer>
+
+  <script src="/js/manager.js"></script>
+</body>
+</html>

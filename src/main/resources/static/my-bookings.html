@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Bookings | UC-02 Reservation Management</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/index.html" class="brand-logo">
+        <div class="brand-icon">🚗</div>
+        <div>
+          <span>SLIIT RENTALS</span>
+          <span class="brand-sub">UC-02 Module • IT25101871</span>
+        </div>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/index.html" class="nav-link">Home</a></li>
+          <li><a href="/search.html" class="nav-link">Search Vehicles</a></li>
+          <li><a href="/my-bookings.html" class="nav-link active">My Bookings</a></li>
+          <li><a href="/manager.html" class="nav-link"><span class="nav-tag">Staff</span> Manager</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 style="font-size: 2rem; font-weight: 800; color: var(--secondary); margin-bottom: 0.25rem;">
+          Customer Bookings
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          View, modify, or cancel your reservations. Demonstrates CRUD Read, Update, and Soft-Delete operations.
+        </p>
+      </div>
+      <div>
+        <a href="/search.html" class="btn btn-primary">+ New Booking</a>
+      </div>
+    </div>
+
+    <!-- Lookup / Filter Bar -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="flex: 1; min-width: 260px;">
+          <label class="form-label" for="filterEmail">Lookup Bookings by Customer Email</label>
+          <input type="email" id="filterEmail" class="form-control" placeholder="Enter customer email (e.g. kasun.perera@email.com)">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="loadBookings()">
+          Search Bookings
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="resetEmailFilter()">
+          Show All Bookings
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="promptSessionToken()">
+          🔑 Session Token
+        </button>
+      </div>
+    </div>
+
+    <!-- Bookings Table Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Reservation Records</h2>
+        <span id="bookingsCountBadge" class="badge badge-modified">0 Bookings</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Customer</th>
+              <th>Vehicle</th>
+              <th>Rental Dates</th>
+              <th>Locations</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTableBody">
+            <tr>
+              <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                Fetching reservations from MySQL database...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modify Booking Modal -->
+  <div class="modal-overlay" id="modifyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Modify Reservation #<span id="modBookingIdDisplay"></span></h3>
+        <button class="modal-close" onclick="closeModifyModal()">&times;</button>
+      </div>
+      <form id="modifyForm" onsubmit="submitBookingModification(event)">
+        <div class="modal-body">
+          <input type="hidden" id="modBookingId">
+          <input type="hidden" id="modVehicleId">
+          <input type="hidden" id="modRentalRate">
+
+          <div style="background: #f8fafc; padding: 0.85rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem; font-size: 0.9rem;">
+            <strong>Vehicle:</strong> <span id="modVehicleName"></span>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="modStartDate">New Pickup Date <span class="required">*</span></label>
+              <input type="date" id="modStartDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="modEndDate">New Drop-off Date <span class="required">*</span></label>
+              <input type="date" id="modEndDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="modPickup">Pickup Location <span class="required">*</span></label>
+              <select id="modPickup" class="form-control" required>
+                <option value="Colombo Branch">Colombo Branch</option>
+                <option value="Kandy Branch">Kandy Branch</option>
+                <option value="Galle Branch">Galle Branch</option>
+                <option value="Negombo Branch">Negombo Branch</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="modDropoff">Drop-off Location <span class="required">*</span></label>
+              <select id="modDropoff" class="form-control" required>
+                <option value="Colombo Branch">Colombo Branch</option>
+                <option value="Kandy Branch">Kandy Branch</option>
+                <option value="Galle Branch">Galle Branch</option>
+                <option value="Negombo Branch">Negombo Branch</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="background: var(--primary-light); padding: 0.85rem; border-radius: var(--radius-sm); margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem;">
+            <span>Estimated New Total:</span>
+            <strong id="modEstimatedTotal" style="color: var(--primary); font-size: 1.15rem;">Rs. 0</strong>
+          </div>
+
+          <div id="modifyErrorAlert" style="display: none; padding: 0.75rem; margin-top: 1rem; border-radius: var(--radius-sm); background-color: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger); font-size: 0.85rem;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModifyModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveModifyBtn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cancel Confirmation Modal -->
+  <div class="modal-overlay" id="cancelModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--danger);">Cancel Reservation?</h3>
+        <button class="modal-close" onclick="closeCancelModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 1rem; font-size: 0.95rem;">
+          Are you sure you want to cancel booking <strong id="cancelBookingIdDisplay">#--</strong> for vehicle <strong id="cancelVehicleDisplay">--</strong>?
+        </p>
+        <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 0.85rem; border-radius: var(--radius-sm); font-size: 0.85rem; color: #92400e;">
+          <strong>ℹ️ Soft-Delete Note:</strong> The booking record will NOT be physically deleted from MySQL. Its status will be updated to <code>CANCELLED</code>, preserving audit history and immediately making the dates available for other customers.
+        </div>
+        <input type="hidden" id="cancelBookingId">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeCancelModal()">Keep Booking</button>
+        <button type="button" class="btn btn-danger" id="confirmCancelBtn" onclick="executeCancelBooking()">
+          Yes, Cancel Booking
+        </button>
+      </div>
+  <!-- Session Token Modal -->
+  <div class="modal-overlay" id="tokenModal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Set Customer Session Token</h3>
+        <button class="modal-close" onclick="closeTokenModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Paste your JWT Bearer token issued by Friend's Access Control module (<code>POST /api/auth/login</code>) below to view your bookings:
+        </p>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="tokenInput">JWT Bearer Token</label>
+          <textarea id="tokenInput" class="form-control" rows="4" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeTokenModal()">Close</button>
+        <button type="button" class="btn btn-primary" onclick="applySessionToken()">Save &amp; Reload Bookings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Alerts Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>SE2030 Software Engineering Individual Project • <strong>UC-02 Vehicle Availability, Search &amp; Booking</strong></p>
+    <p>Developed by <span class="footer-highlight">Maduwearachchi T.G.O.N (IT25101871)</span> • Spring Boot + MySQL + Vanilla JS</p>
+  </footer>
+
+  <script src="/js/bookings.js"></script>
+</body>
+</html>

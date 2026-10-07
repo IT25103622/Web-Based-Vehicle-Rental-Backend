@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLIIT Vehicle Rental | UC-02 Availability & Booking</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/index.html" class="brand-logo">
+        <div class="brand-icon">🚗</div>
+        <div>
+          <span>SLIIT RENTALS</span>
+          <span class="brand-sub">UC-02 Module • IT25101871</span>
+        </div>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/index.html" class="nav-link active">Home</a></li>
+          <li><a href="/search.html" class="nav-link">Search Vehicles</a></li>
+          <li><a href="/my-bookings.html" class="nav-link">My Bookings</a></li>
+          <li><a href="/manager.html" class="nav-link"><span class="nav-tag">Staff</span> Manager</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="student-badge">
+        <span>🎓 Student: Maduwearachchi T.G.O.N</span>
+        <span>•</span>
+        <span>Reg No: IT25101871</span>
+        <span>•</span>
+        <span>SE2030 Software Engineering</span>
+      </div>
+      <h1 class="hero-title">Rent Premium Vehicles with <span>Real-Time Availability</span></h1>
+      <p class="hero-lead">
+        UC-02: Search and filter vehicles across Sri Lanka, check accurate date-based availability, create bookings, and manage reservations with automated double-booking prevention.
+      </p>
+
+      <!-- Quick Search Form Widget -->
+      <div class="card" style="max-width: 900px; color: var(--text-main); margin-top: 1.5rem;">
+        <form id="quickSearchForm" onsubmit="handleQuickSearch(event)">
+          <div class="form-grid" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Pickup Date <span class="required">*</span></label>
+              <input type="date" id="quickStartDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Drop-off Date <span class="required">*</span></label>
+              <input type="date" id="quickEndDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Pickup Branch</label>
+              <select id="quickPickup" class="form-control">
+                <option value="">All Branches (Sri Lanka)</option>
+                <option value="Colombo Branch">Colombo Branch</option>
+                <option value="Kandy Branch">Kandy Branch</option>
+                <option value="Galle Branch">Galle Branch</option>
+                <option value="Negombo Branch">Negombo Branch</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vehicle Type</label>
+              <select id="quickType" class="form-control">
+                <option value="">All Categories</option>
+                <option value="SEDAN">Sedan</option>
+                <option value="SUV">SUV</option>
+                <option value="HATCHBACK">Hatchback</option>
+                <option value="VAN">Van</option>
+                <option value="LUXURY">Luxury</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem;">
+              🔍 Search Available Vehicles
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Architecture & Features Showcase -->
+    <section style="margin-bottom: 3rem;">
+      <div class="card-header">
+        <h2 class="card-title">Core UC-02 Capabilities Implemented</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem;">
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🛡️</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Double-Booking Prevention</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted);">
+            Enforces accurate Java backend date overlapping logic (<code>existing.start &lt; req.end &amp;&amp; existing.end &gt; req.start</code>) both on search and mandatory secondary check before saving.
+          </p>
+        </div>
+
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Real-Time Availability</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted);">
+            Considers operational status (AVAILABLE, RESERVED, RENTED, MAINTENANCE) and active reservations. Cancelled bookings release dates immediately.
+          </p>
+        </div>
+
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Complete CRUD Lifecycle</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted);">
+            Create reservations, read vehicle fleet &amp; booking history, modify dates with collision checking, and cancel reservations via soft-delete preservation.
+          </p>
+        </div>
+
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Operations Manager View</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted);">
+            Dedicated dashboard displaying fleet KPIs, booking records, revenue stats, and operational status filters for staff oversight.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fleet Showcase -->
+    <section>
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Featured Fleet in MySQL Database</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Loaded live via Spring Data JPA from table <code>vehicles</code></p>
+        </div>
+        <a href="/search.html" class="btn btn-secondary btn-sm">View Full Catalog →</a>
+      </div>
+      <div id="featuredVehicles" class="vehicles-grid">
+        <!-- Loaded via JavaScript -->
+        <p style="color: var(--text-muted);">Loading fleet records from MySQL...</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>SE2030 Software Engineering Individual Project • <strong>UC-02 Vehicle Availability, Search &amp; Booking</strong></p>
+    <p>Developed by <span class="footer-highlight">Maduwearachchi T.G.O.N (IT25101871)</span> • Spring Boot + MySQL + Vanilla JS</p>
+  </footer>
+
+  <script>
+    // Set default dates (Tomorrow to 4 days later)
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dropoff = new Date(tomorrow);
+    dropoff.setDate(dropoff.getDate() + 3);
+
+    const startInput = document.getElementById('quickStartDate');
+    const endInput = document.getElementById('quickEndDate');
+
+    startInput.min = tomorrow.toISOString().split('T')[0];
+    startInput.value = tomorrow.toISOString().split('T')[0];
+
+    endInput.min = tomorrow.toISOString().split('T')[0];
+    endInput.value = dropoff.toISOString().split('T')[0];
+
+    function handleQuickSearch(e) {
+      e.preventDefault();
+      const start = startInput.value;
+      const end = endInput.value;
+      const branch = document.getElementById('quickPickup').value;
+      const type = document.getElementById('quickType').value;
+
+      let url = `/search.html?startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}`;
+      if (branch) url += `&pickupLocation=${encodeURIComponent(branch)}`;
+      if (type) url += `&vehicleType=${encodeURIComponent(type)}`;
+
+      window.location.href = url;
+    }
+
+    // Load preview vehicles
+    fetch('/api/vehicles')
+      .then(res => res.json())
+      .then(vehicles => {
+        const container = document.getElementById('featuredVehicles');
+        container.innerHTML = '';
+        vehicles.slice(0, 3).forEach(v => {
+          const statusClass = v.operationalStatus === 'AVAILABLE' ? 'badge-available' : 'badge-maintenance';
+          container.innerHTML += `
+            <div class="vehicle-card">
+              <div class="vehicle-card-img-wrap">
+                <img src="${v.imageUrl}" alt="${v.brand} ${v.model}" class="vehicle-card-img" onerror="this.src='https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80'">
+                <span class="vehicle-status-tag ${statusClass}">${v.operationalStatus}</span>
+              </div>
+              <div class="vehicle-body">
+                <div class="vehicle-header">
+                  <div>
+                    <h3 class="vehicle-title">${v.brand} ${v.model}</h3>
+                    <span class="vehicle-reg">${v.registrationNumber}</span>
+                  </div>
+                  <span class="spec-chip">${v.vehicleType}</span>
+                </div>
+                <div class="vehicle-specs">
+                  <span class="spec-chip">👥 ${v.seatingCapacity} Seats</span>
+                  <span class="spec-chip">⛽ ${v.fuelLevel}</span>
+                  <span class="spec-chip">✨ ${v.vehicleCondition}</span>
+                </div>
+                <p class="vehicle-desc">${v.description}</p>
+                <div class="vehicle-footer">
+                  <div class="vehicle-price">Rs. ${Number(v.rentalRate).toLocaleString()}<span> / day</span></div>
+                  <a href="/search.html" class="btn btn-primary btn-sm">Check Dates</a>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching fleet:', err);
+      });
+  </script>
+</body>
+</html>
