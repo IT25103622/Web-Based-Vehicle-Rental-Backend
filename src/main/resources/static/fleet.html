@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Rental System - Fleet & Inspection</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 max-w-md w-full"></div>
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <i class="fa-solid fa-car-side text-xl"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-lg tracking-tight">SLIIT Vehicle Rental</span>
+                    <span class="text-xs text-blue-400 block font-medium">Group 26-Y2-S1-MLB-WEB3G1-10</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex space-x-1">
+                <a href="/index.html" class="px-3 py-2 text-sm">Booking home</a>
+                <a href="#" data-view="dashboard" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition">
+                    <i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard
+                </a>
+                <a href="#" data-view="vehicles" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition">
+                    <i class="fa-solid fa-car mr-1.5"></i> Fleet (UC-03)
+                </a>
+                <a href="#" data-view="inspections" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition">
+                    <i class="fa-solid fa-clipboard-check mr-1.5"></i> Return & Inspection (UC-04)
+                </a>
+            </nav>
+
+            <!-- User Status & Profile -->
+            <div class="flex items-center space-x-4">
+                <div class="text-right hidden sm:block">
+                    <div id="user-display-name" class="text-sm font-semibold text-white">Fleet Manager</div>
+                    <div id="user-display-role" class="text-xs text-blue-300 font-mono">MANAGER (UC-03/04)</div>
+                </div>
+                <button id="btn-logout" class="bg-slate-800 hover:bg-red-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-md text-xs font-medium border border-slate-700 transition">
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Switch / Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- ========================================================== -->
+        <!-- VIEW 1: FLEET DASHBOARD -->
+        <!-- ========================================================== -->
+        <section id="view-dashboard" class="view-section">
+            <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-200 mb-8">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Fleet Operations Dashboard</h1>
+                    <p class="text-sm text-slate-500 mt-1">Real-time overview of vehicle inventory, operational states, and renewal warnings.</p>
+                </div>
+                <div class="mt-4 md:mt-0 flex space-x-3">
+                    <button onclick="Fleet.openAddVehicleModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition flex items-center">
+                        <i class="fa-solid fa-plus mr-2"></i> Add New Vehicle
+                    </button>
+                    <button onclick="App.switchView('vehicles')" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition">
+                        View Fleet Catalog
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Metric Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 card-hover">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Fleet</div>
+                    <div id="stat-total" class="text-2xl font-black text-slate-900 mt-1">0</div>
+                    <div class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-car text-blue-500 mr-1"></i> Master records</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-green-200 card-hover">
+                    <div class="text-xs font-bold text-green-600 uppercase tracking-wider">Available</div>
+                    <div id="stat-available" class="text-2xl font-black text-green-700 mt-1">0</div>
+                    <div class="text-xs text-green-600 mt-1"><i class="fa-solid fa-check mr-1"></i> Ready for booking</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-blue-200 card-hover">
+                    <div class="text-xs font-bold text-blue-600 uppercase tracking-wider">Reserved</div>
+                    <div id="stat-reserved" class="text-2xl font-black text-blue-700 mt-1">0</div>
+                    <div class="text-xs text-blue-600 mt-1"><i class="fa-solid fa-calendar-check mr-1"></i> Pending handover</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-purple-200 card-hover">
+                    <div class="text-xs font-bold text-purple-600 uppercase tracking-wider">Rented</div>
+                    <div id="stat-rented" class="text-2xl font-black text-purple-700 mt-1">0</div>
+                    <div class="text-xs text-purple-600 mt-1"><i class="fa-solid fa-route mr-1"></i> On the road</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-amber-200 card-hover">
+                    <div class="text-xs font-bold text-amber-600 uppercase tracking-wider">Maintenance</div>
+                    <div id="stat-maintenance" class="text-2xl font-black text-amber-700 mt-1">0</div>
+                    <div class="text-xs text-amber-600 mt-1"><i class="fa-solid fa-wrench mr-1"></i> In workshop</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-red-200 card-hover">
+                    <div class="text-xs font-bold text-red-600 uppercase tracking-wider">Out of Service</div>
+                    <div id="stat-out-of-service" class="text-2xl font-black text-red-700 mt-1">0</div>
+                    <div class="text-xs text-red-600 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Unusable</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-amber-300 card-hover bg-amber-50/40">
+                    <div class="text-xs font-bold text-amber-700 uppercase tracking-wider">Alerts</div>
+                    <div id="stat-alerts" class="text-2xl font-black text-amber-800 mt-1">0</div>
+                    <div class="text-xs text-amber-700 mt-1"><i class="fa-solid fa-bell mr-1"></i> Renewals due</div>
+                </div>
+            </div>
+
+            <!-- Insurance & License Renewal Alert Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-bell text-amber-500"></i>
+                        <h2 class="font-bold text-slate-800">Insurance & License Renewal Alerts</h2>
+                        <span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded">Configurable: 30 days threshold</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-slate-50 text-slate-600 uppercase text-xs font-semibold border-b">
+                            <tr>
+                                <th class="px-6 py-3">Reg Number</th>
+                                <th class="px-6 py-3">Vehicle</th>
+                                <th class="px-6 py-3">Document Type</th>
+                                <th class="px-6 py-3">Policy / License No</th>
+                                <th class="px-6 py-3">Expiry Date</th>
+                                <th class="px-6 py-3">Days Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-alerts-body" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- VIEW 2: VEHICLE FLEET MANAGEMENT (UC-03) -->
+        <!-- ========================================================== -->
+        <section id="view-vehicles" class="view-section hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-200 mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Manage Fleet and Vehicle Records</h1>
+                    <p class="text-sm text-slate-500 mt-1">Add, update, search, filter, and maintain complete vehicle lifecycle records.</p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <button onclick="Fleet.openAddVehicleModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition flex items-center">
+                        <i class="fa-solid fa-plus mr-2"></i> Add Vehicle
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" id="filter-search" oninput="Fleet.loadVehicles()" placeholder="Search Reg, Brand, Model..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <select id="filter-status" onchange="Fleet.loadVehicles()" class="w-full py-2 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="">All Operational Statuses</option>
+                        <option value="AVAILABLE">Available</option>
+                        <option value="RESERVED">Reserved</option>
+                        <option value="RENTED">Rented</option>
+                        <option value="MAINTENANCE">Maintenance</option>
+                        <option value="OUT_OF_SERVICE">Out of Service</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="filter-type" onchange="Fleet.loadVehicles()" class="w-full py-2 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="">All Vehicle Types</option>
+                        <option value="SEDAN">Sedan</option>
+                        <option value="SUV">SUV</option>
+                        <option value="HATCHBACK">Hatchback</option>
+                        <option value="VAN">Van</option>
+                        <option value="LUXURY">Luxury</option>
+                        <option value="ELECTRIC">Electric</option>
+                        <option value="TRUCK">Truck</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="filter-active" onchange="Fleet.loadVehicles()" class="w-full py-2 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="">All (Active & Deactivated)</option>
+                        <option value="true" selected>Active Only</option>
+                        <option value="false">Deactivated Only</option>
+                    </select>
+                </div>
+                <div>
+                    <button onclick="document.getElementById('filter-search').value=''; document.getElementById('filter-status').value=''; document.getElementById('filter-type').value=''; document.getElementById('filter-active').value='true'; Fleet.loadVehicles();" class="w-full py-2 px-3 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Reset Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vehicles Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-slate-50 text-slate-600 uppercase text-xs font-semibold border-b">
+                            <tr>
+                                <th class="px-6 py-3">Registration</th>
+                                <th class="px-6 py-3">Vehicle Details</th>
+                                <th class="px-6 py-3">Rate</th>
+                                <th class="px-6 py-3">Mileage & Fuel</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3">State</th>
+                                <th class="px-6 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vehicles-table-body" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- VIEW 3: VEHICLE DETAILS & INSPECTION LOG -->
+        <!-- ========================================================== -->
+        <section id="view-vehicle-details" class="view-section hidden">
+            <div class="pb-6 border-b border-slate-200 mb-6 flex justify-between items-center">
+                <div>
+                    <button onclick="App.switchView('vehicles')" class="text-sm font-medium text-blue-600 hover:underline mb-2 inline-flex items-center">
+                        <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to Fleet List
+                    </button>
+                    <h1 id="detail-brand-model" class="text-2xl font-bold text-slate-900">Toyota Prius (Sedan)</h1>
+                    <span id="detail-reg" class="text-sm font-mono text-slate-600 font-semibold">CAB-1234</span>
+                </div>
+                <div>
+                    <span id="detail-status" class="status-badge status-AVAILABLE">AVAILABLE</span>
+                </div>
+            </div>
+
+<h3 class="font-bold mb-3">Vehicle images</h3><div id="detail-vehicle-images" class="flex flex-wrap gap-3 mb-6"></div>
+            <!-- Specs & Info Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Card 1: Specs -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-900 text-sm border-b pb-3 mb-4"><i class="fa-solid fa-gauge-high mr-2 text-blue-600"></i> Operational Specs</h3>
+                    <dl class="space-y-3 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-500">Rental Rate:</dt><dd id="detail-rate" class="font-semibold text-slate-800">-</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Seating Capacity:</dt><dd id="detail-seating" class="font-semibold text-slate-800">-</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Odometer Mileage:</dt><dd id="detail-mileage" class="font-semibold text-slate-800">-</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Fuel Level:</dt><dd id="detail-fuel" class="font-semibold text-slate-800">-</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Condition:</dt><dd id="detail-condition" class="font-semibold text-slate-800">-</dd></div>
+                    </dl>
+                </div>
+
+                <!-- Card 2: Insurance -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-900 text-sm border-b pb-3 mb-4"><i class="fa-solid fa-shield-halved mr-2 text-green-600"></i> Insurance Record</h3>
+                    <dl class="space-y-3 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-500">Policy Number:</dt><dd id="detail-ins-policy" class="font-mono text-slate-800">-</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Expiry Date:</dt><dd id="detail-ins-expiry" class="font-semibold text-slate-800">-</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Renewal Status:</dt><dd><span id="detail-ins-status" class="px-2 py-0.5 text-xs font-bold rounded">VALID</span></dd></div>
+                    </dl>
+                </div>
+
+                <!-- Card 3: License -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-900 text-sm border-b pb-3 mb-4"><i class="fa-solid fa-id-card mr-2 text-purple-600"></i> License Record</h3>
+                    <dl class="space-y-3 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-500">License Number:</dt><dd id="detail-lic-number" class="font-mono text-slate-800">-</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Expiry Date:</dt><dd id="detail-lic-expiry" class="font-semibold text-slate-800">-</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Renewal Status:</dt><dd><span id="detail-lic-status" class="px-2 py-0.5 text-xs font-bold rounded">VALID</span></dd></div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Historical Inspection Records for this Vehicle -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
+                    <h2 class="font-bold text-slate-800"><i class="fa-solid fa-clipboard-list mr-2 text-blue-600"></i> Vehicle Inspection History (UC-04)</h2>
+                </div>
+                <div id="vehicle-inspections-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- VIEW 4: RETURN & INSPECTIONS PORTAL (UC-04) -->
+        <!-- ========================================================== -->
+        <section id="view-inspections" class="view-section hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-200 mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Vehicle Return & Inspection (UC-04)</h1>
+                    <p class="text-sm text-slate-500 mt-1">Manage pre-rental handover inspections, post-rental returns, automated condition comparisons, and damage reports.</p>
+                </div>
+            </div>
+
+            <!-- Inspections Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-slate-50 text-slate-600 uppercase text-xs font-semibold border-b">
+                            <tr>
+                                <th class="px-6 py-3">ID</th>
+                                <th class="px-6 py-3">Vehicle</th>
+                                <th class="px-6 py-3">Type</th>
+                                <th class="px-6 py-3">Odometer & Fuel</th>
+                                <th class="px-6 py-3">Damage Findings</th>
+                                <th class="px-6 py-3">Resulting Status</th>
+                                <th class="px-6 py-3 text-right">Report</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inspections-table-body" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========================================================== -->
+    <!-- MODAL 1: ADD / EDIT VEHICLE (UC-03) -->
+    <!-- ========================================================== -->
+    <div id="vehicle-form-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col my-auto">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 id="vehicle-modal-title" class="font-bold text-lg text-slate-900">Add New Vehicle</h3>
+                <button onclick="App.closeModal('vehicle-form-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="vehicle-form" onsubmit="Fleet.saveVehicle(event)" class="p-6 overflow-y-auto space-y-4 text-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Registration Number *</label>
+                        <input type="text" id="v-reg-number" required placeholder="e.g. CAB-1234" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Vehicle Type *</label>
+                        <select id="v-type" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="SEDAN">Sedan</option>
+                            <option value="SUV">SUV</option>
+                            <option value="HATCHBACK">Hatchback</option>
+                            <option value="VAN">Van</option>
+                            <option value="LUXURY">Luxury</option>
+                            <option value="ELECTRIC">Electric</option>
+                            <option value="TRUCK">Truck</option>
+                            <option value="WAGON">Wagon</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Brand *</label>
+                        <input type="text" id="v-brand" required placeholder="e.g. Toyota" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Model *</label>
+                        <input type="text" id="v-model" required placeholder="e.g. Prius" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Seating Capacity *</label>
+                        <input type="number" id="v-seating" required min="1" max="100" value="5" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Daily Rental Rate (LKR) *</label>
+                        <input type="number" id="v-rate" required min="0.01" step="0.01" placeholder="9500.00" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Condition *</label>
+                        <select id="v-condition" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="EXCELLENT">Excellent</option>
+                            <option value="GOOD" selected>Good</option>
+                            <option value="FAIR">Fair</option>
+                            <option value="POOR">Poor</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Current Mileage (km) *</label>
+                        <input type="number" id="v-mileage" required min="0" step="0.1" placeholder="45000" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Fuel Level (0-100%) *</label>
+                        <input type="number" id="v-fuel" required min="0" max="100" value="100" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Insurance Info -->
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                    <h4 class="font-bold text-xs uppercase tracking-wider text-slate-700"><i class="fa-solid fa-shield-halved text-green-600 mr-1"></i> Insurance Details</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-medium text-slate-600 text-xs mb-1">Policy Number *</label>
+                            <input type="text" id="v-ins-policy" required placeholder="INS-2026-001" class="w-full px-3 py-1.5 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block font-medium text-slate-600 text-xs mb-1">Expiry Date *</label>
+                            <input type="date" id="v-ins-expiry" required class="w-full px-3 py-1.5 border rounded-lg text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- License Info -->
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                    <h4 class="font-bold text-xs uppercase tracking-wider text-slate-700"><i class="fa-solid fa-id-card text-purple-600 mr-1"></i> License Details</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-medium text-slate-600 text-xs mb-1">License Number *</label>
+                            <input type="text" id="v-lic-number" required placeholder="LIC-WP-1234" class="w-full px-3 py-1.5 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block font-medium text-slate-600 text-xs mb-1">Expiry Date *</label>
+                            <input type="date" id="v-lic-expiry" required class="w-full px-3 py-1.5 border rounded-lg text-sm">
+                        </div>
+                    </div>
+                </div>
+
+<div class="p-4 border rounded-xl space-y-2">
+    <label for="vehicle-images-input" class="font-semibold block">Vehicle images</label>
+    <p class="text-xs text-slate-500">Select one or multiple images. JPG, PNG or WebP; up to 5 MB each and 10 images total. Click a preview to enlarge.</p>
+    <input id="vehicle-images-input" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="ImageUploads.select('vehicle', this.files)">
+    <div id="vehicle-images-preview" class="flex flex-wrap gap-3"></div>
+</div>
+<div id="vehicle-existing-images" class="flex flex-wrap gap-3"></div>
+                <div id="vehicle-operational-status-group" class="hidden">
+                    <label class="block font-medium text-slate-700 mb-1">Operational Status</label>
+                    <select id="v-status" class="w-full px-3 py-2 border rounded-lg">
+                        <option value="AVAILABLE">AVAILABLE</option>
+                        <option value="RESERVED">RESERVED</option>
+                        <option value="RENTED">RENTED</option>
+                        <option value="MAINTENANCE">MAINTENANCE</option>
+                        <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 border-t flex justify-end space-x-3">
+                    <button type="button" onclick="App.closeModal('vehicle-form-modal')" class="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm">Save Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <!-- MODAL 2: CHANGE OPERATIONAL STATUS -->
+    <!-- ========================================================== -->
+    <div id="status-change-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 class="font-bold text-lg text-slate-900 mb-1">Update Operational Status</h3>
+            <p class="text-sm text-slate-500 mb-4">Vehicle: <span id="status-vehicle-reg" class="font-bold text-slate-800"></span></p>
+
+            <form onsubmit="Fleet.submitStatusChange(event)" class="space-y-4 text-sm">
+                <input type="hidden" id="status-vehicle-id">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Select New Status</label>
+                    <select id="status-new-select" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="AVAILABLE">AVAILABLE (Ready for Booking)</option>
+                        <option value="RESERVED">RESERVED (Hold for customer)</option>
+                        <option value="RENTED">RENTED (Active trip)</option>
+                        <option value="MAINTENANCE">MAINTENANCE (Workshop)</option>
+                        <option value="OUT_OF_SERVICE">OUT_OF_SERVICE (Unusable)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Reason / Notes (Logged for Audit)</label>
+                    <textarea id="status-reason" rows="2" placeholder="e.g. Scheduled oil change completed." class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" onclick="App.closeModal('status-change-modal')" class="px-4 py-2 border rounded-lg text-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <!-- MODAL 3: RECORD INSPECTION (UC-04) -->
+    <!-- ========================================================== -->
+    <div id="inspection-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col my-auto">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h3 id="insp-type-title" class="font-bold text-lg text-slate-900">Vehicle Return & Inspection</h3>
+                    <p class="text-xs text-slate-500">Vehicle: <span id="insp-vehicle-reg" class="font-semibold text-slate-800"></span></p>
+                </div>
+                <button onclick="App.closeModal('inspection-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="inspection-form" onsubmit="Inspection.submitInspection(event)" class="p-6 overflow-y-auto space-y-4 text-sm">
+                <input type="hidden" id="insp-vehicle-id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Inspection Stage *</label>
+                        <select id="insp-type" required class="w-full px-3 py-2 border rounded-lg bg-white font-medium">
+                            <option value="PRE_RENTAL">Pre-Rental Handover Inspection</option>
+                            <option value="POST_RENTAL">Post-Rental Return Inspection</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Booking Reference</label>
+                        <input type="text" id="insp-booking-ref" placeholder="e.g. BK-2026-891" class="w-full px-3 py-2 border rounded-lg uppercase font-mono">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Odometer (km) *</label>
+                        <input type="number" id="insp-odometer" required step="0.1" class="w-full px-3 py-2 border rounded-lg font-bold">
+                        <span class="text-xs text-slate-500 mt-1 block">Recorded: <span id="insp-current-odo-label">-</span></span>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Fuel Level (%) *</label>
+                        <input type="number" id="insp-fuel" required min="0" max="100" class="w-full px-3 py-2 border rounded-lg font-bold">
+                        <span class="text-xs text-slate-500 mt-1 block">Recorded: <span id="insp-current-fuel-label">-</span></span>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Overall Condition *</label>
+                        <select id="insp-condition" required class="w-full px-3 py-2 border rounded-lg">
+                            <option value="EXCELLENT">Excellent</option>
+                            <option value="GOOD">Good</option>
+                            <option value="FAIR">Fair</option>
+                            <option value="POOR">Poor</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Equipment Checklist -->
+                <div>
+                    <label class="block font-bold text-xs uppercase tracking-wider text-slate-700 mb-2">Mandatory Equipment & Document Verification</label>
+                    <div class="grid grid-cols-2 gap-2 p-3 border rounded-xl bg-white">
+                        <label class="flex items-center space-x-2 text-xs font-medium cursor-pointer">
+                            <input type="checkbox" id="insp-chk-tire" checked class="rounded text-blue-600 focus:ring-0">
+                            <span>Spare Tire Present</span>
+                        </label>
+                        <label class="flex items-center space-x-2 text-xs font-medium cursor-pointer">
+                            <input type="checkbox" id="insp-chk-tools" checked class="rounded text-blue-600 focus:ring-0">
+                            <span>Jack & Wheel Tools</span>
+                        </label>
+                        <label class="flex items-center space-x-2 text-xs font-medium cursor-pointer">
+                            <input type="checkbox" id="insp-chk-docs" checked class="rounded text-blue-600 focus:ring-0">
+                            <span>Vehicle Registration Copy</span>
+                        </label>
+                        <label class="flex items-center space-x-2 text-xs font-medium cursor-pointer">
+                            <input type="checkbox" id="insp-chk-kit" checked class="rounded text-blue-600 focus:ring-0">
+                            <span>First Aid & Warning Triangle</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Cleanliness</label>
+                        <select id="insp-cleanliness" class="w-full px-3 py-2 border rounded-lg">
+                            <option value="CLEAN">Clean / Valeted</option>
+                            <option value="ACCEPTABLE">Acceptable</option>
+                            <option value="DIRTY">Requires Deep Cleaning</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Inspector Notes</label>
+                        <input type="text" id="insp-notes" placeholder="General comments on handover/return" class="w-full px-3 py-2 border rounded-lg">
+                    </div>
+                </div>
+
+                <label class="flex items-center gap-2 p-3 bg-amber-50 rounded-xl border">
+                    <input type="checkbox" id="insp-repair-required">
+                    <span>Repair required — automatically place vehicle in Maintenance</span>
+                </label>
+<div class="p-4 border rounded-xl space-y-2">
+    <label for="inspection-images-input" class="font-semibold block">Inspection evidence images</label>
+    <p class="text-xs text-slate-500">Select one or multiple images. JPG, PNG or WebP; up to 5 MB each and 10 images total. Click a preview to enlarge.</p>
+    <input id="inspection-images-input" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="ImageUploads.select('inspection', this.files)">
+    <div id="inspection-images-preview" class="flex flex-wrap gap-3"></div>
+</div>
+                <!-- Damage Assessment Toggle -->
+                <div class="pt-2">
+                    <label class="flex items-center space-x-2 cursor-pointer bg-red-50 p-3 rounded-xl border border-red-200">
+                        <input type="checkbox" id="insp-has-damage" onchange="Inspection.toggleDamageSection(this.checked)" class="rounded text-red-600 focus:ring-0">
+                        <span class="font-bold text-red-800 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1"></i> New Damage Detected (Create Damage Report)</span>
+                    </label>
+                </div>
+
+                <!-- Damage Report Input Section -->
+                <div id="damage-report-fields" class="hidden p-4 bg-red-50/50 rounded-xl border border-red-200 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-medium text-slate-700 text-xs mb-1">Damage Severity *</label>
+                            <select id="insp-damage-severity" class="w-full px-3 py-1.5 border rounded-lg bg-white">
+                                <option value="MINOR">Minor (Scratch / Dent - LKR &lt; 15,000)</option>
+                                <option value="MODERATE">Moderate (Needs Bodywork / Maintenance)</option>
+                                <option value="SEVERE">Severe (Unsafe / Out of Service)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-medium text-slate-700 text-xs mb-1">Estimated Repair Cost (LKR)</label>
+                            <input type="number" id="insp-repair-cost" min="0" step="100" placeholder="e.g. 15000" class="w-full px-3 py-1.5 border rounded-lg bg-white font-bold">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 text-xs mb-1">Damaged Parts / Locations</label>
+                        <input type="text" id="insp-damage-parts" placeholder="e.g. Front left bumper, side mirror" class="w-full px-3 py-1.5 border rounded-lg bg-white">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 text-xs mb-1">Damage Description *</label>
+                        <textarea id="insp-damage-desc" rows="2" placeholder="Detailed description of identified damages and discrepancies..." class="w-full px-3 py-1.5 border rounded-lg bg-white"></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-medium text-slate-700 text-xs mb-1">Photo Evidence</label>
+                            <p class="text-xs text-slate-500">Use Inspection evidence images above to upload photos.</p>
+                        </div>
+                        <div class="flex items-center pt-4">
+                            <label class="flex items-center space-x-2 text-xs font-bold text-red-700">
+                                <input type="checkbox" id="insp-req-repair" class="rounded text-red-600">
+                                <span>Requires Immediate Workshop Repair</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t flex justify-end space-x-3">
+                    <button type="button" onclick="App.closeModal('inspection-modal')" class="px-4 py-2 border rounded-lg text-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm">Record & Complete Inspection</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <!-- MODAL 4: FULL INSPECTION REPORT VIEW (UC-04) -->
+    <!-- ========================================================== -->
+    <div id="inspection-report-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col my-auto p-6 overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-4 mb-4">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Formal Vehicle Inspection Sheet</span>
+                    <h3 class="text-xl font-black text-slate-900">Inspection Report <span id="report-id"></span></h3>
+                </div>
+                <button onclick="App.closeModal('inspection-report-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="space-y-4 text-sm">
+                <!-- Header Info -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-xl border">
+                    <div><span class="text-xs text-slate-500 block">Vehicle:</span><span id="report-vehicle-reg" class="font-bold"></span></div>
+                    <div><span class="text-xs text-slate-500 block">Model:</span><span id="report-vehicle-model" class="font-medium text-slate-700"></span></div>
+                    <div><span class="text-xs text-slate-500 block">Inspection Type:</span><span id="report-type" class="font-bold text-blue-700"></span></div>
+                    <div><span class="text-xs text-slate-500 block">Inspector:</span><span id="report-inspector" class="font-medium"></span></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-xl border">
+                    <div>Inspection Date: <span id="report-date"></span></div>
+                    <div>Booking Reference: <span id="report-booking-ref"></span></div>
+                    <div>Cleanliness: <span id="report-cleanliness"></span></div>
+                    <div>Notes: <span id="report-notes"></span></div>
+                    <div>Repair result: <strong id="report-repair-status"></strong></div>
+                </div>
+                <!-- Readings -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="p-3 border rounded-xl bg-white"><span class="text-xs text-slate-500 block">Odometer Reading</span><span id="report-odometer" class="text-lg font-bold text-slate-800"></span></div>
+                    <div class="p-3 border rounded-xl bg-white"><span class="text-xs text-slate-500 block">Fuel Level</span><span id="report-fuel" class="text-lg font-bold text-slate-800"></span></div>
+                    <div class="p-3 border rounded-xl bg-white"><span class="text-xs text-slate-500 block">Condition</span><span id="report-condition" class="text-lg font-bold text-slate-800"></span></div>
+                </div>
+
+                <!-- Equipment Checklist Verification -->
+                <div class="p-4 border rounded-xl bg-slate-50">
+                    <h4 class="font-bold text-xs uppercase text-slate-700 mb-2">Equipment Checklist</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div>Spare Tire: <strong id="report-chk-tire" class="text-slate-800"></strong></div>
+                        <div>Tools: <strong id="report-chk-tools" class="text-slate-800"></strong></div>
+                        <div>Documents: <strong id="report-chk-docs" class="text-slate-800"></strong></div>
+                        <div>First Aid: <strong id="report-chk-kit" class="text-slate-800"></strong></div>
+                    </div>
+                </div>
+
+                <div class="border rounded-xl p-4">
+                    <h4 class="font-bold mb-3">Inspection evidence images</h4>
+                    <div id="report-inspection-images" class="flex flex-wrap gap-3 mb-3"></div>
+                    <div class="p-4 border rounded-xl space-y-2">
+    <label for="report-images-input" class="font-semibold block">Add more evidence images</label>
+    <p class="text-xs text-slate-500">Select one or multiple images. JPG, PNG or WebP; up to 5 MB each and 10 images total. Click a preview to enlarge.</p>
+    <input id="report-images-input" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="ImageUploads.select('report', this.files)">
+    <div id="report-images-preview" class="flex flex-wrap gap-3"></div>
+</div>
+                    <button type="button" onclick="Inspection.uploadReportImages()" class="mt-3 bg-blue-600 text-white rounded px-4 py-2">Upload selected images</button>
+                </div>
+                <!-- Pre vs Post Comparison Section (UC-04 Automated Comparison) -->
+                <div id="report-comparison-section" class="p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-2">
+                    <h4 class="font-bold text-xs uppercase text-purple-900"><i class="fa-solid fa-code-compare mr-1"></i> Pre-Rental vs Post-Rental Automated Comparison</h4>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div>Mileage: <span id="cmp-odo-prev"></span> &rarr; <span id="cmp-odo-final"></span> (<strong id="cmp-odo-diff" class="text-purple-800"></strong>)</div>
+                        <div>Fuel: <span id="cmp-fuel-prev"></span> &rarr; <span id="cmp-fuel-final"></span> (<strong id="cmp-fuel-diff" class="text-purple-800"></strong>)</div>
+                        <div>Finance Deposit: <strong id="cmp-refund" class="text-green-700 font-bold"></strong></div>
+                    </div>
+                </div>
+
+                <!-- Damage Section -->
+                <div id="report-damage-section" class="p-4 bg-red-50 rounded-xl border border-red-200 space-y-2">
+                    <h4 class="font-bold text-xs uppercase text-red-900"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Damage Assessment & Repair Estimates</h4>
+                    <div class="text-xs text-red-800">
+                        <div>Severity: <strong id="report-damage-severity"></strong> • Estimated Cost: <strong id="report-damage-cost"></strong></div>
+                        <div>Damaged Parts: <span id="report-damage-parts"></span></div>
+                        <div class="mt-1">Description: <span id="report-damage-desc" class="italic"></span></div>
+                    </div>
+                </div>
+
+                <!-- Resulting Status Outcome -->
+                <div class="p-4 border rounded-xl flex justify-between items-center bg-slate-900 text-white">
+                    <div>
+                        <span class="text-xs text-slate-400 block">Automated Operational Transition</span>
+                        <span class="font-medium text-sm">Vehicle Master Status:</span>
+                    </div>
+                    <span id="report-status-badge" class="status-badge"></span>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="Inspection.openEditResult(Inspection.currentReportId)" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Edit Result / Mark Fixed</button>
+                <button onclick="Inspection.deleteReport(Inspection.currentReportId)" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm">Delete Report</button>
+                <button onclick="App.closeModal('inspection-report-modal')" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium">Close Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <div id="booking-history-modal" role="dialog" aria-modal="true" aria-labelledby="booking-history-title" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h3 id="booking-history-title" class="font-bold text-lg">Vehicle Booking History</h3>
+                <button onclick="App.closeModal('booking-history-modal')" aria-label="Close booking history" class="px-3 py-2 text-slate-600">✕</button>
+            </div>
+            <div class="p-6">
+                <p id="booking-history-vehicle" class="font-semibold text-slate-900"></p>
+                <p id="booking-history-cutoff" class="mt-2 mb-4 text-sm text-slate-500"></p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-600"><tr>
+                            <th class="px-4 py-3">Booking ID</th><th class="px-4 py-3">Customer</th>
+                            <th class="px-4 py-3">Pickup date</th><th class="px-4 py-3">Return date</th>
+                            <th class="px-4 py-3">Status</th><th class="px-4 py-3">Total amount</th>
+                            <th class="px-4 py-3">Pickup location</th><th class="px-4 py-3">Drop-off location</th>
+                        </tr></thead>
+                        <tbody id="booking-history-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title" class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+            <h2 id="login-title" class="text-xl font-bold mb-4">Fleet Manager Login</h2>
+            <form id="login-form">
+                <label for="login-email">Email</label>
+                <input id="login-email" type="email" required autocomplete="username" class="border rounded p-2 w-full mb-4">
+                <label for="login-password">Password</label>
+                <input id="login-password" type="password" required autocomplete="current-password" class="border rounded p-2 w-full mb-4">
+                <button type="submit" class="bg-blue-600 text-white rounded p-2 w-full">Log in</button>
+            </form>
+        </div>
+    </div>
+    <div id="inspection-edit-result-modal" role="dialog" aria-modal="true" aria-labelledby="edit-result-title" class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4">
+        <form id="inspection-edit-result-form" onsubmit="Inspection.saveResult(event)" class="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl">
+            <h2 id="edit-result-title" class="text-xl font-bold mb-4">Edit Inspection Result</h2>
+            <input id="edit-result-id" type="hidden">
+            <label for="edit-repair-status">Repair result</label>
+            <select id="edit-repair-status" class="border rounded p-2 w-full mb-4">
+                <option value="NOT_REQUIRED">Repair not required</option>
+                <option value="REQUIRED">Repair required</option>
+                <option value="FIXED">Fixed — repair completed</option>
+            </select>
+            <label for="edit-result-condition">Condition after assessment / repair</label>
+            <select id="edit-result-condition" class="border rounded p-2 w-full mb-4">
+                <option>EXCELLENT</option><option>GOOD</option><option>FAIR</option><option>POOR</option>
+            </select>
+            <label for="edit-result-notes">Inspection / repair notes</label>
+            <textarea id="edit-result-notes" maxlength="5000" class="border rounded p-2 w-full mb-4"></textarea>
+            <p class="text-sm text-slate-500 mb-4">Fixed releases a vehicle from Maintenance only when no other repair or current rental blocks it. Deactivated and Out of Service vehicles keep their current status.</p>
+            <button type="button" onclick="App.closeModal('inspection-edit-result-modal')" class="border rounded px-4 py-2">Cancel</button>
+            <button type="submit" class="bg-blue-600 text-white rounded px-4 py-2">Save Result</button>
+        </form>
+    </div>
+
+    <div id="image-viewer-modal" role="dialog" aria-modal="true" aria-label="Image preview" class="fixed inset-0 z-[60] bg-black/80 hidden flex items-center justify-center p-6">
+        <button type="button" onclick="App.closeModal('image-viewer-modal')" class="absolute top-4 right-4 bg-white rounded px-4 py-2">Close image</button>
+        <img id="image-viewer-photo" alt="Image preview" class="max-w-full max-h-[85vh] object-contain">
+    </div>
+    <script src="/js/app.js"></script>
+    <script src="/js/images.js"></script>
+    <script src="/js/fleet.js"></script>
+    <script src="/js/inspection.js"></script>
+</body>
+</html>
