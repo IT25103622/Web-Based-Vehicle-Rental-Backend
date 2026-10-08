@@ -1,0 +1,15 @@
+target/
+.idea/
+*.class
+*.iml
+
+# Real secrets - never commit. Copy application.properties.example instead.
+src/main/resources/application.properties
+
+# Runtime generated
+backups/
+uploads/
+*.log
+
+# OS
+.DS_Store
