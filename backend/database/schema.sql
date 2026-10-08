@@ -5,14 +5,13 @@
 --
 -- Merges the schemas each teammate was building against one shared
 -- database (Access Control, Booking, Fleet/Inspection, Support, Pricing).
--- Hibernate is set to ddl-auto=update, so it WILL create/adjust tables
--- itself on first boot too - this script exists to guarantee seed data
--- (roles, permissions, the first admin account, the canonical `vehicles`
--- table other modules key off of) and the audit-log immutability
--- triggers that Hibernate cannot create for you. Tables this script does
--- not define (vehicle_inspections, damage_reports, uploaded_images,
--- support_tickets, discount_rules, promotions) are created automatically
--- by Hibernate from the JPA entities on first boot.
+-- Every table used by the merged app is defined explicitly below so the
+-- full schema is reviewable before the app ever runs. Hibernate is still
+-- set to ddl-auto=update as a safety net (it will add any column/table
+-- this script somehow misses), but nothing load-bearing is left to it -
+-- this script alone gives you seed data (roles, permissions, the first
+-- admin account, demo vehicles) and the audit-log immutability triggers
+-- Hibernate cannot create for you either way.
 -- =====================================================================
 
 CREATE DATABASE IF NOT EXISTS sliit_vehicle_rental_db;
@@ -305,4 +304,123 @@ CREATE TABLE IF NOT EXISTS bookings (
     updated_at DATETIME,
     FOREIGN KEY (customer_id) REFERENCES users(id),
     FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id)
+);
+
+-- =====================================================================
+-- Return & Inspection (UC-04, Sampath) - previously left to Hibernate
+-- ddl-auto=update to auto-create on first boot. Written out explicitly
+-- here too so the full schema is reviewable before the app ever runs.
+-- Column names/types match inspection.entity.VehicleInspection and
+-- inspection.entity.DamageReport exactly.
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS vehicle_inspections (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    vehicle_id BIGINT NOT NULL,
+    booking_reference VARCHAR(100),
+    inspection_type VARCHAR(30) NOT NULL,
+    inspector_id BIGINT,
+    inspector_name VARCHAR(150) NOT NULL,
+    inspection_date DATETIME NOT NULL,
+    odometer_reading DOUBLE NOT NULL,
+    fuel_level INT NOT NULL,
+    vehicle_condition VARCHAR(30) NOT NULL,
+    spare_tire_present BOOLEAN NOT NULL DEFAULT TRUE,
+    jack_and_tools_present BOOLEAN NOT NULL DEFAULT TRUE,
+    registration_doc_present BOOLEAN NOT NULL DEFAULT TRUE,
+    first_aid_kit_present BOOLEAN NOT NULL DEFAULT TRUE,
+    cleanliness VARCHAR(50) DEFAULT 'CLEAN',
+    notes TEXT,
+    resulting_vehicle_status VARCHAR(30) NOT NULL,
+    repair_status VARCHAR(30) DEFAULT 'NOT_REQUIRED',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
+    INDEX idx_inspections_vehicle (vehicle_id),
+    INDEX idx_inspections_type (inspection_type),
+    INDEX idx_inspections_booking (booking_reference)
+);
+
+CREATE TABLE IF NOT EXISTS damage_reports (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    inspection_id BIGINT NOT NULL,
+    damage_severity VARCHAR(30) NOT NULL,
+    damage_description TEXT NOT NULL,
+    damaged_parts VARCHAR(255),
+    photo_url VARCHAR(500),
+    estimated_repair_cost DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    requires_immediate_repair BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY (inspection_id) REFERENCES vehicle_inspections(id)
+);
+
+-- =====================================================================
+-- Vehicle / Inspection Images (Sampath) - matches media.UploadedImage
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS uploaded_images (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    vehicle_id BIGINT,
+    inspection_id BIGINT,
+    stored_name VARCHAR(80) NOT NULL UNIQUE,
+    original_name VARCHAR(150) NOT NULL,
+    content_type VARCHAR(30) NOT NULL,
+    size_bytes BIGINT NOT NULL,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
+    FOREIGN KEY (inspection_id) REFERENCES vehicle_inspections(id)
+);
+
+-- =====================================================================
+-- Support Tickets (UC-06, Ahamed) - matches support.entity.SupportTicket
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS support_tickets (
+    ticket_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    booking_id BIGINT,
+    vehicle_id BIGINT,
+    subject VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    section VARCHAR(50),
+    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+    date_issued DATETIME NOT NULL,
+    updated_at DATETIME,
+    FOREIGN KEY (customer_id) REFERENCES users(id),
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id)
+);
+
+-- =====================================================================
+-- Discounts & Promotions (Wijesinghe, ported from Node.js/MongoDB) -
+-- matches pricing.entity.DiscountRule and pricing.entity.Promotion
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS discount_rules (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    rule_name VARCHAR(150) NOT NULL,
+    rule_type VARCHAR(30) NOT NULL,
+    target_identifier VARCHAR(100) NOT NULL,
+    discount_percentage DOUBLE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    description TEXT,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME,
+    UNIQUE KEY uq_discount_rule_type_target (rule_type, target_identifier)
+);
+
+CREATE TABLE IF NOT EXISTS promotions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    promotion_code VARCHAR(50) NOT NULL UNIQUE,
+    promotion_name VARCHAR(150) NOT NULL,
+    promotion_type VARCHAR(30) NOT NULL,
+    vehicle_category VARCHAR(100) NOT NULL,
+    discount_percentage DOUBLE NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    minimum_rental_days INT NOT NULL DEFAULT 1,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    promotion_image VARCHAR(255),
+    banner_image VARCHAR(255),
+    description TEXT,
+    usage_count BIGINT NOT NULL DEFAULT 0,
+    total_discount_granted DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME
 );
