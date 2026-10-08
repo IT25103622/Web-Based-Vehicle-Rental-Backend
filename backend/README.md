@@ -21,8 +21,6 @@ audit trail.
 | Support Tickets | `ahamed-mha` (completed during merge) | `support` |
 | Discounts & Promotions (ported from Node.js/TypeScript/MongoDB) | `wijesinghe-st` | `pricing` |
 
-`samarakoon-ps`'s branch had no pushed module-specific code at merge time.
-
 ## Setup
 
 1. **Start MySQL**, then run `database/schema.sql` in MySQL Workbench (or

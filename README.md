@@ -11,8 +11,8 @@ merges every member's module into one unified, deployable system:
   one dark-themed UI, with a dedicated section per module.
 
 Each member's original work lives on their own branch (`ahamed-mha`,
-`maduwerachchi-tgon`, `samarakoon-ps`, `sampath-kamp`, `widanage-pwcn`,
-`wijesinghe-st`) for reference; this branch is the integrated result opened
-as a PR against `main` for team review.
+`maduwerachchi-tgon`, `sampath-kamp`, `widanage-pwcn`, `wijesinghe-st`) for
+reference; this branch is the integrated result opened as a PR against
+`main` for team review.
 
 See `backend/README.md` and `frontend/README.md` for setup instructions.
