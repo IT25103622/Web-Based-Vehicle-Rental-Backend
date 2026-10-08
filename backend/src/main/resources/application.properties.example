@@ -9,7 +9,7 @@ spring.application.name=vehicle-rental-platform
 
 # ---------- MySQL ----------
 # Run database/schema.sql first (or let Hibernate ddl-auto=update build it).
-spring.datasource.url=jdbc:mysql://localhost:3306/vehicle_rental_db?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+spring.datasource.url=jdbc:mysql://localhost:3306/sliit_vehicle_rental_db?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
 spring.datasource.username=root
 spring.datasource.password=CHANGE_ME
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
@@ -44,7 +44,7 @@ app.mfa.otp-length=6
 app.backup.mysqldump-path=mysqldump
 app.backup.output-dir=./backups
 app.backup.cron=0 0 2 * * *
-app.backup.db-name=vehicle_rental_db
+app.backup.db-name=sliit_vehicle_rental_db
 app.backup.db-user=root
 app.backup.db-password=CHANGE_ME
 

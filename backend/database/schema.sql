@@ -15,8 +15,8 @@
 -- by Hibernate from the JPA entities on first boot.
 -- =====================================================================
 
-CREATE DATABASE IF NOT EXISTS vehicle_rental_db;
-USE vehicle_rental_db;
+CREATE DATABASE IF NOT EXISTS sliit_vehicle_rental_db;
+USE sliit_vehicle_rental_db;
 
 -- ---------------------------------------------------------------------
 -- Roles (fixed set - see RoleName.java)
