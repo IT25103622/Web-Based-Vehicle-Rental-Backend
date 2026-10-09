@@ -44,24 +44,32 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable()) // stateless JWT API, no cookies
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                // Public customer-facing browsing - no login required to
-                // browse the fleet catalog or get a price/discount quote.
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/vehicles/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/promotions", "/api/promotions/*").permitAll()
-                .requestMatchers("/api/discounts/calculate").permitAll()
-                .requestMatchers("/api/promotions/evaluate").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/vehicle-images/*/content").permitAll()
-                // fine-grained checks happen via @RequiresPermission (PermissionAspect);
-                // here we only enforce "must be logged in" for everything else.
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable()) // stateless JWT API, no cookies
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // No/invalid/expired token -> 401 (so the frontend sends the user back to
+                // login) instead of Spring's default empty-body 403.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"message\":\"Session expired or not logged in. Please log in again.\"}");
+                        }))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        // Public customer-facing browsing - no login required to
+                        // browse the fleet catalog or get a price/discount quote.
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/vehicles/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/promotions", "/api/promotions/*").permitAll()
+                        .requestMatchers("/api/discounts/calculate").permitAll()
+                        .requestMatchers("/api/promotions/evaluate").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/vehicle-images/*/content").permitAll()
+                        // fine-grained checks happen via @RequiresPermission (PermissionAspect);
+                        // here we only enforce "must be logged in" for everything else.
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

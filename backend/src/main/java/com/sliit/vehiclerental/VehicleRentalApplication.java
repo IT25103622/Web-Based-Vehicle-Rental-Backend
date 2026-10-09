@@ -25,7 +25,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 @EnableAsync
-public class VehicleRentalApplication {
+public class    VehicleRentalApplication {
     public static void main(String[] args) {
         SpringApplication.run(VehicleRentalApplication.class, args);
     }

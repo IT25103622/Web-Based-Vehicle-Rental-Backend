@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../../api/client";
-import { Card, EmptyState, ErrorBanner, LoadingRow, Modal, StatusPill, SuccessBanner, VehiclePhoto, money } from "../../../components/ui";
+import { Card, EmptyState, ErrorBanner, LoadingRow, Modal, StatusPill, SuccessBanner, VehiclePhoto, fmtDate, fmtDateTime, money } from "../../../components/ui";
 
 const VEHICLE_TYPES = ["SEDAN", "SUV", "HATCHBACK", "VAN", "LUXURY", "TRUCK", "WAGON", "ELECTRIC", "BIKE"];
 const CONDITIONS = ["EXCELLENT", "GOOD", "FAIR", "POOR"];
@@ -27,17 +27,29 @@ export default function CatalogTab() {
   const [data, setData] = useState({ content: [], totalPages: 1 });
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [activeFilter, setActiveFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [viewing, setViewing] = useState(null);
 
   async function load() {
     setLoading(true);
     setError("");
     try {
-      setData(await api.get("/fleet/vehicles", { query: query || undefined, status: status || undefined, page, size: 12 }));
+      setData(
+          await api.get("/fleet/vehicles", {
+            query: query || undefined,
+            status: status || undefined,
+            vehicleType: typeFilter || undefined,
+            active: activeFilter || undefined,
+            page,
+            size: 12,
+          })
+      );
     } catch (e) {
       setError(e.message);
     } finally {
@@ -60,6 +72,27 @@ export default function CatalogTab() {
     try {
       await api.patch(`/fleet/vehicles/${v.id}/status`, { status: newStatus, reason: `Set to ${newStatus} from catalog` });
       setSuccess(`${v.registrationNumber} set to ${newStatus}.`);
+      load();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function setActive(v, active) {
+    try {
+      await api.patch(`/fleet/vehicles/${v.id}/${active ? "reactivate" : "deactivate"}`);
+      setSuccess(`${v.registrationNumber} ${active ? "reactivated" : "deactivated"}.`);
+      load();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function deletePermanently(v) {
+    if (!window.confirm(`Permanently delete ${v.registrationNumber}? This cannot be undone and is blocked while bookings or inspections reference it.`)) return;
+    try {
+      await api.del(`/fleet/vehicles/${v.id}/permanent`);
+      setSuccess(`${v.registrationNumber} deleted.`);
       load();
     } catch (e) {
       setError(e.message);
@@ -102,6 +135,25 @@ export default function CatalogTab() {
               ))}
             </select>
           </div>
+          <div className="field">
+            <label>Type</label>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">All</option>
+              {VEHICLE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Record</label>
+            <select value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)}>
+              <option value="">Active & deactivated</option>
+              <option value="true">Active only</option>
+              <option value="false">Deactivated only</option>
+            </select>
+          </div>
           <div className="field" style={{ justifyContent: "flex-end" }}>
             <button className="btn btn-primary" type="submit">
               Filter
@@ -135,8 +187,21 @@ export default function CatalogTab() {
                       <StatusPill value={v.condition} />
                       {!v.active && <StatusPill value="OUT_OF_SERVICE" />}
                     </div>
+                    <div className="vehicle-meta" style={{ fontSize: 11.5 }}>
+                <span>
+                  Insurance <StatusPill value={v.insuranceStatus} />{" "}
+                  {v.insuranceDaysUntilExpiry != null && (v.insuranceDaysUntilExpiry >= 0 ? `${v.insuranceDaysUntilExpiry}d` : "expired")}
+                </span>
+                      <span>
+                  License <StatusPill value={v.licenseStatus} />{" "}
+                        {v.licenseDaysUntilExpiry != null && (v.licenseDaysUntilExpiry >= 0 ? `${v.licenseDaysUntilExpiry}d` : "expired")}
+                </span>
+                    </div>
                     <div className="vehicle-price">{money(v.rentalRate)}/day</div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <button className="btn btn-sm" onClick={() => setViewing(v)}>
+                        Details
+                      </button>
                       <button
                           className="btn btn-sm"
                           onClick={() => {
@@ -145,6 +210,12 @@ export default function CatalogTab() {
                           }}
                       >
                         Edit
+                      </button>
+                      <button className="btn btn-sm" onClick={() => setActive(v, !v.active)}>
+                        {v.active ? "Deactivate" : "Reactivate"}
+                      </button>
+                      <button className="btn btn-sm" onClick={() => deletePermanently(v)}>
+                        Delete
                       </button>
                       <select
                           className="btn btn-sm"
@@ -179,6 +250,8 @@ export default function CatalogTab() {
             </div>
         )}
 
+        {viewing && <VehicleDetailModal vehicle={viewing} onClose={() => setViewing(null)} />}
+
         {showForm && (
             <VehicleFormModal
                 vehicle={editing}
@@ -191,6 +264,144 @@ export default function CatalogTab() {
             />
         )}
       </Card>
+  );
+}
+
+function VehicleDetailModal({ vehicle, onClose }) {
+  const [history, setHistory] = useState(null);
+  const [inspections, setInspections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [h, i] = await Promise.all([
+          api.get(`/fleet/vehicles/${vehicle.id}/booking-history`),
+          api.get(`/fleet/vehicles/${vehicle.id}/inspections`),
+        ]);
+        setHistory(h);
+        setInspections(i);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [vehicle.id]);
+
+  const v = history?.vehicle || vehicle;
+  const bookings = history?.bookings || [];
+
+  return (
+      <Modal title={`${v.brand} ${v.model} — ${v.registrationNumber}`} onClose={onClose}>
+        <ErrorBanner message={error} />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          {(v.images || []).map((img) => (
+              <div key={img.id} style={{ width: 110 }}>
+                <VehiclePhoto url={img.url} alt={img.originalName} height={80} />
+              </div>
+          ))}
+        </div>
+        <div className="vehicle-meta" style={{ marginBottom: 8 }}>
+          <span>{v.vehicleType}</span>
+          <span>{v.seatingCapacity} seats</span>
+          <span>{v.mileage?.toLocaleString()} km</span>
+          <span>Fuel {v.fuelLevel}%</span>
+          <StatusPill value={v.operationalStatus} />
+          <StatusPill value={v.condition} />
+          {!v.active && <StatusPill value="DEACTIVATED" />}
+        </div>
+        <p style={{ fontSize: 12.5, margin: "4px 0" }}>
+          Insurance {v.insurancePolicyNumber} — expires {fmtDate(v.insuranceExpiryDate)} <StatusPill value={v.insuranceStatus} />
+        </p>
+        <p style={{ fontSize: 12.5, margin: "4px 0 14px" }}>
+          License {v.licenseNumber} — expires {fmtDate(v.licenseExpiryDate)} <StatusPill value={v.licenseStatus} />
+        </p>
+
+        {loading ? (
+            <LoadingRow />
+        ) : (
+            <>
+              <h4 style={{ margin: "12px 0 6px" }}>Booking history ({bookings.length})</h4>
+              {bookings.length === 0 ? (
+                  <EmptyState>No bookings for this vehicle.</EmptyState>
+              ) : (
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Customer</th>
+                        <th>Dates</th>
+                        <th>Route</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                      {bookings.map((b) => (
+                          <tr key={b.bookingId}>
+                            <td>{b.bookingId}</td>
+                            <td>{b.customerName}</td>
+                            <td>
+                              {fmtDate(b.startDate)} → {fmtDate(b.endDate)}
+                            </td>
+                            <td>
+                              {b.pickupLocation} → {b.dropoffLocation}
+                            </td>
+                            <td>
+                              <StatusPill value={b.bookingStatus} />
+                            </td>
+                            <td>{money(b.totalAmount)}</td>
+                          </tr>
+                      ))}
+                      </tbody>
+                    </table>
+                  </div>
+              )}
+
+              <h4 style={{ margin: "16px 0 6px" }}>Inspection history ({inspections.length})</h4>
+              {inspections.length === 0 ? (
+                  <EmptyState>No inspections recorded for this vehicle.</EmptyState>
+              ) : (
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Inspector</th>
+                        <th>Condition</th>
+                        <th>Repair</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                      {inspections.map((i) => (
+                          <tr key={i.id}>
+                            <td>{fmtDateTime(i.inspectionDate)}</td>
+                            <td>{i.inspectionType?.replaceAll("_", " ")}</td>
+                            <td>{i.inspectorName}</td>
+                            <td>
+                              <StatusPill value={i.condition} />
+                            </td>
+                            <td>
+                              <StatusPill value={i.repairStatus} />
+                            </td>
+                          </tr>
+                      ))}
+                      </tbody>
+                    </table>
+                  </div>
+              )}
+            </>
+        )}
+        <div className="modal-actions">
+          <button type="button" className="btn" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </Modal>
   );
 }
 

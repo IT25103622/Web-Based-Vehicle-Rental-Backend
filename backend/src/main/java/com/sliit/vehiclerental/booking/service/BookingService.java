@@ -12,10 +12,14 @@ import com.sliit.vehiclerental.fleet.entity.Vehicle;
 import com.sliit.vehiclerental.fleet.entity.VehicleOperationalStatus;
 import com.sliit.vehiclerental.fleet.repository.VehicleRepository;
 import com.sliit.vehiclerental.fleet.service.VehicleStatusService;
+import com.sliit.vehiclerental.pricing.dto.EvaluatePromotionRequest;
+import com.sliit.vehiclerental.pricing.dto.PromotionEvaluationResult;
+import com.sliit.vehiclerental.pricing.service.PromotionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -29,15 +33,18 @@ public class BookingService {
     private final VehicleRepository vehicleRepository;
     private final CustomerUserRepository customerUserRepository;
     private final VehicleStatusService vehicleStatusService;
+    private final PromotionService promotionService;
 
     public BookingService(BookingRepository bookingRepository,
                           VehicleRepository vehicleRepository,
                           CustomerUserRepository customerUserRepository,
-                          VehicleStatusService vehicleStatusService) {
+                          VehicleStatusService vehicleStatusService,
+                          PromotionService promotionService) {
         this.bookingRepository = bookingRepository;
         this.vehicleRepository = vehicleRepository;
         this.customerUserRepository = customerUserRepository;
         this.vehicleStatusService = vehicleStatusService;
+        this.promotionService = promotionService;
     }
 
     /**
@@ -77,8 +84,8 @@ public class BookingService {
             Booking clash = overlapping.get(0);
             throw new IllegalStateException(
                     "This vehicle is no longer available for the selected dates (" +
-                    request.getStartDate() + " to " + request.getEndDate() +
-                    "). It is already booked from " + clash.getStartDate() + " to " + clash.getEndDate() + ".");
+                            request.getStartDate() + " to " + request.getEndDate() +
+                            "). It is already booked from " + clash.getStartDate() + " to " + clash.getEndDate() + ".");
         }
 
         long rentalDays = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
@@ -86,6 +93,13 @@ public class BookingService {
             rentalDays = 1;
         }
         BigDecimal totalAmount = vehicle.getRentalRate().multiply(BigDecimal.valueOf(rentalDays));
+
+        // Apply the best active promotion (same rules as the Pricing evaluator).
+        PromotionEvaluationResult promo = evaluatePromotion(vehicle, request.getStartDate(), request.getEndDate());
+        boolean promoApplied = promo.getAppliedPromotion() != null && promo.getDiscountAmount() > 0;
+        if (promoApplied) {
+            totalAmount = BigDecimal.valueOf(promo.getFinalAmount()).setScale(2, RoundingMode.HALF_UP);
+        }
 
         Booking booking = new Booking();
         booking.setCustomer(customer);
@@ -102,6 +116,10 @@ public class BookingService {
         booking.setBookingStatus(BookingStatus.CONFIRMED);
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        if (promoApplied) {
+            promotionService.recordUsage(promo.getAppliedPromotion().getId(), BigDecimal.valueOf(promo.getDiscountAmount()));
+        }
 
         // Cross-module integration (Fleet, UC-03): flip the vehicle to
         // RESERVED so Fleet/Manager dashboards reflect the new booking
@@ -165,8 +183,8 @@ public class BookingService {
             Booking clash = overlapping.get(0);
             throw new IllegalStateException(
                     "Vehicle is not available for the updated dates (" +
-                    updateDTO.getStartDate() + " to " + updateDTO.getEndDate() +
-                    "). Another booking exists from " + clash.getStartDate() + " to " + clash.getEndDate() + ".");
+                            updateDTO.getStartDate() + " to " + updateDTO.getEndDate() +
+                            "). Another booking exists from " + clash.getStartDate() + " to " + clash.getEndDate() + ".");
         }
 
         long rentalDays = ChronoUnit.DAYS.between(updateDTO.getStartDate(), updateDTO.getEndDate());
@@ -174,6 +192,11 @@ public class BookingService {
             rentalDays = 1;
         }
         BigDecimal totalAmount = booking.getVehicle().getRentalRate().multiply(BigDecimal.valueOf(rentalDays));
+        PromotionEvaluationResult updatePromo =
+                evaluatePromotion(booking.getVehicle(), updateDTO.getStartDate(), updateDTO.getEndDate());
+        if (updatePromo.getAppliedPromotion() != null && updatePromo.getDiscountAmount() > 0) {
+            totalAmount = BigDecimal.valueOf(updatePromo.getFinalAmount()).setScale(2, RoundingMode.HALF_UP);
+        }
 
         booking.setStartDate(updateDTO.getStartDate());
         booking.setEndDate(updateDTO.getEndDate());
@@ -203,5 +226,13 @@ public class BookingService {
         }
 
         return BookingResponseDTO.fromEntity(cancelledBooking);
+    }
+
+    private PromotionEvaluationResult evaluatePromotion(Vehicle vehicle, LocalDate start, LocalDate end) {
+        EvaluatePromotionRequest req = new EvaluatePromotionRequest();
+        req.setVehicleId(vehicle.getId());
+        req.setPickupDate(start);
+        req.setReturnDate(end);
+        return promotionService.evaluatePromotionForBooking(req);
     }
 }

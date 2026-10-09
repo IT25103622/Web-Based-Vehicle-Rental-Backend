@@ -57,6 +57,17 @@ export const api = {
   patch: (path, body) => request(path, { method: "PATCH", body }),
   del: (path) => request(path, { method: "DELETE" }),
   imageUrl: (path) => `${ORIGIN}${path}`,
+  // Auth-protected files (verification documents, inspection photos) can't be
+  // a plain <img src> because it sends no Authorization header. Fetch the bytes
+  // with the Bearer token and return a Blob (used by SecureDocument in ui.jsx).
+  getBlob: async (path) => {
+    const token = getToken();
+    const headers = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${ORIGIN}${path}`, { headers });
+    if (!res.ok) throw new Error(`Could not load file (${res.status})`);
+    return res.blob();
+  },
 };
 
 export default api;
