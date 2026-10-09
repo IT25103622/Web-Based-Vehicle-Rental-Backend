@@ -1,4 +1,8 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+// Backend image endpoints (vehicle-images/{id}/content, etc.) already return
+// paths starting with "/api/...", so building a URL for them needs the bare
+// origin, not BASE_URL (which already ends in "/api" and would double it up).
+const ORIGIN = BASE_URL.replace(/\/api\/?$/, "");
 
 function getToken() {
   return localStorage.getItem("vr_token");
@@ -8,7 +12,7 @@ async function request(path, { method = "GET", body, isForm = false, params } = 
   let url = `${BASE_URL}${path}`;
   if (params) {
     const qs = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
+        Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
     ).toString();
     if (qs) url += `?${qs}`;
   }
@@ -52,7 +56,7 @@ export const api = {
   put: (path, body) => request(path, { method: "PUT", body }),
   patch: (path, body) => request(path, { method: "PATCH", body }),
   del: (path) => request(path, { method: "DELETE" }),
-  imageUrl: (path) => `${BASE_URL}${path}`,
+  imageUrl: (path) => `${ORIGIN}${path}`,
 };
 
 export default api;

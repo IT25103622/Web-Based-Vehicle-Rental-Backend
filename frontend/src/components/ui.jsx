@@ -1,12 +1,46 @@
+import api from "../api/client";
+
+// `url` is the relative path the backend returns (e.g. "/api/vehicle-images/5/content")
+// or null/undefined if no image has been uploaded for this vehicle yet.
+export function VehiclePhoto({ url, alt, height = 150 }) {
+  if (!url) {
+    return (
+        <div
+            style={{
+              height,
+              borderRadius: 10,
+              background: "var(--bg-panel)",
+              border: "1px dashed var(--border-subtle)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--text-muted)",
+              fontSize: 28,
+            }}
+            aria-label={alt || "No photo"}
+        >
+          🚗
+        </div>
+    );
+  }
+  return (
+      <img
+          src={api.imageUrl(url)}
+          alt={alt || "Vehicle photo"}
+          style={{ height, width: "100%", objectFit: "cover", borderRadius: 10, display: "block" }}
+      />
+  );
+}
+
 export function StatCard({ label, value, color = "var(--accent-purple-strong)", foot }) {
   return (
-    <div className="stat-card">
-      <div className="stat-label" style={{ color }}>
-        {label}
+      <div className="stat-card">
+        <div className="stat-label" style={{ color }}>
+          {label}
+        </div>
+        <div className="stat-value">{value}</div>
+        {foot && <div className="stat-foot">{foot}</div>}
       </div>
-      <div className="stat-value">{value}</div>
-      {foot && <div className="stat-foot">{foot}</div>}
-    </div>
   );
 }
 
@@ -41,7 +75,7 @@ export function StatusPill({ value }) {
   if (!value) return <span className="pill">—</span>;
   const colors = STATUS_COLORS[value] || { bg: "rgba(124,92,255,0.15)", fg: "#9478ff" };
   return (
-    <span className="pill" style={{ background: colors.bg, color: colors.fg }}>
+      <span className="pill" style={{ background: colors.bg, color: colors.fg }}>
       {String(value).replaceAll("_", " ")}
     </span>
   );
@@ -49,38 +83,38 @@ export function StatusPill({ value }) {
 
 export function Card({ title, actions, children }) {
   return (
-    <div className="card">
-      {title && (
-        <div className="card-header">
-          <h3>{title}</h3>
-          {actions && <div className="page-actions">{actions}</div>}
-        </div>
-      )}
-      <div className="card-body">{children}</div>
-    </div>
+      <div className="card">
+        {title && (
+            <div className="card-header">
+              <h3>{title}</h3>
+              {actions && <div className="page-actions">{actions}</div>}
+            </div>
+        )}
+        <div className="card-body">{children}</div>
+      </div>
   );
 }
 
 export function SubTabs({ tabs, active, onChange }) {
   return (
-    <div className="subtabs">
-      {tabs.map((t) => (
-        <div key={t.key} className={`subtab ${active === t.key ? "active" : ""}`} onClick={() => onChange(t.key)}>
-          {t.label}
-        </div>
-      ))}
-    </div>
+      <div className="subtabs">
+        {tabs.map((t) => (
+            <div key={t.key} className={`subtab ${active === t.key ? "active" : ""}`} onClick={() => onChange(t.key)}>
+              {t.label}
+            </div>
+        ))}
+      </div>
   );
 }
 
 export function Modal({ title, onClose, children }) {
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box">
-        <h3>{title}</h3>
-        {children}
+      <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="modal-box">
+          <h3>{title}</h3>
+          {children}
+        </div>
       </div>
-    </div>
   );
 }
 
@@ -102,9 +136,19 @@ export function SuccessBanner({ message }) {
   return <div className="success-banner">{message}</div>;
 }
 
+const lkrFormatter = new Intl.NumberFormat("en-LK", {
+  style: "currency",
+  currency: "LKR",
+  currencyDisplay: "code",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 export function money(v) {
   if (v === null || v === undefined) return "—";
-  return `$${Number(v).toFixed(2)}`;
+  // "LKR 12,345.00" — currencyDisplay: "code" avoids relying on a Rs.
+  // glyph mapping that not every OS/browser font has for the LK locale.
+  return lkrFormatter.format(Number(v));
 }
 
 export function fmtDate(v) {
